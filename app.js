@@ -199,6 +199,20 @@ document.addEventListener('DOMContentLoaded', () => {
             let rawMax = newBP + Math.max(1, Math.ceil(customEOQ * cfg.eoqPeriod));
             newMax = (lot > 1) ? Math.ceil(rawMax/lot)*lot : rawMax;
 
+        } else if (cfg.calcMethod === 'project') {
+            // Barcol-Air Projectmatig
+            // VV = gemVraag * lt_mnd * 0.5
+            // BP = (gemVraag * lt_mnd) + VV
+            // EOQ = gemVraag * eoq_period
+            // Max = BP + EOQ
+            
+            const customVV = effDemand * ltMnd * 0.5;
+            newBP = Math.max(0, Math.ceil((effDemand * ltMnd) + customVV)) + cfg.minSafety;
+            
+            const customEOQ = effDemand * cfg.eoqPeriod;
+            let rawMax = newBP + Math.max(1, Math.ceil(customEOQ));
+            newMax = (lot > 1) ? Math.ceil(rawMax/lot)*lot : rawMax;
+
         } else if (cfg.calcMethod === 'custom') {
             // Evaluator helper
             const evaluateCustom = (formulaStr, locals) => {
@@ -352,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="data-item"><label>Kostprijs per stuk</label><strong>€${item.kostprijs.toFixed(2)}</strong></div>
                 <div class="data-item"><label>Levertijd / Lot</label><strong>${item.levertijd} wkn × ${cfg.ltFactor}× / ${item.lot} st</strong></div>
                 <div class="data-item"><label>Servicegraad / Z</label><strong>${sgSlider.value}% / Z=${getZ().toFixed(3)}</strong></div>
-                <div class="data-item"><label>Methode</label><strong>${cfg.calcMethod === 'ultimair' ? 'TDG90' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule')}</strong></div>
+                <div class="data-item"><label>Methode</label><strong>${cfg.calcMethod === 'ultimair' ? 'TDG90' : (cfg.calcMethod === 'project' ? 'Projectmatig' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule'))}</strong></div>
                 <div class="data-item"><label>Seizoen?</label><strong>${item.seizoenActief?`Ja – factor ${item.piekFactor.toFixed(2)}×`:'Nee'}</strong></div>
             </div>
             <div class="logic-box">
@@ -431,6 +445,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <code>VV = Z × √(StDev × levertijd_mnd × gem_vraag)</code>
                     <code>Bestelpunt = (gem_vraag × levertijd_mnd) + VV</code>
                     <code>EOQ = Z × StDev × √(levertijd_mnd)</code>
+                    <code>Max Aantal = Bestelpunt + EOQ</code>
+                `;
+            } else if (paramCalcMethod.value === 'project') {
+                methodeInfoTxt.innerHTML = `
+                    <strong>Barcol-Air Projectmatig:</strong>
+                    <code>Veiligheidsvoorraad (VV) = gem_vraag × levertijd_mnd × 0.5</code>
+                    <code>Bestelpunt = (gem_vraag × levertijd_mnd) + VV</code>
+                    <code>Bestelgrootte (EOQ) = gem_vraag × EOQ_periode</code>
                     <code>Max Aantal = Bestelpunt + EOQ</code>
                 `;
             } else {
@@ -559,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'StDev':                  +item.st_dev.toFixed(1),
             'Levertijd (wkn)':        item.levertijd,
             'Lotgrootte':             item.lot,
-            'Methode':                cfg.calcMethod === 'ultimair' ? 'TDG90 Custom' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule'),
+            'Methode':                cfg.calcMethod === 'ultimair' ? 'TDG90 Custom' : (cfg.calcMethod === 'project' ? 'Projectmatig' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule')),
             'Servicegraad %':         parseFloat(sgSlider.value),
             'Z-factor':               +getZ().toFixed(3),
             'LT-factor':              cfg.ltFactor,
