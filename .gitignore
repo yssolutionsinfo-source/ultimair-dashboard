@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+*.pyc
+debug_cols.json
+cols.json
+formulas.json

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voorraadadvies – UltimAir TDG90</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-container">
+
+    <!-- ── SIDEBAR ─────────────────────────────── -->
+    <aside class="sidebar">
+        <div class="logo-wrap">
+            <img id="sidebarLogo" src="ultimair_logo.png" alt="Logo" class="sidebar-logo">
+        </div>
+
+        <!-- Servicegraad geplaatst in Instellingen Modal -->
+
+        <!-- Dataset upload -->
+        <div class="settings-panel">
+            <h3 class="panel-label">Dataset uploaden</h3>
+            <label for="fileUpload" class="upload-label">
+                <span id="uploadText">📂 Kies Excel bestand</span>
+                <input type="file" id="fileUpload" accept=".xlsx,.xls" style="display:none">
+            </label>
+            <p id="fileStatus" class="file-status">Geen bestand geladen</p>
+        </div>
+
+        <!-- Filters -->
+        <nav class="filters">
+            <h3 class="panel-label">Filter</h3>
+            <button class="filter-btn active" data-filter="all">Alle Artikelen</button>
+            <button class="filter-btn" data-filter="✅ OK">✅ In Orde</button>
+            <button class="filter-btn" data-filter="⚠️ Check">⚠️ Check</button>
+            <button class="filter-btn" data-filter="❌ Actie nodig">❌ Actie Nodig</button>
+        </nav>
+
+        <!-- Stats -->
+        <div class="sidebar-stats">
+            <div class="stat-box">
+                <span>Totaal Artikelen</span>
+                <strong id="stat-total">–</strong>
+            </div>
+            <div class="stat-box warning">
+                <span>Aandacht Nodig</span>
+                <strong id="stat-warning">–</strong>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── MAIN ──────────────────────────────────── -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="search-wrap">
+                <input type="text" id="searchInput" placeholder="Zoek op artikelnummer of omschrijving…">
+            </div>
+            <div class="topbar-right">
+                <button id="exportBtn" class="export-btn" title="Exporteer resultaten naar Excel" disabled>⬇️ Export Excel</button>
+                <button id="settingsBtn" class="settings-btn" title="Instellingen">⚙️</button>
+                <div class="swegon-logo">Swegon</div>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <!-- Empty state -->
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon">📊</div>
+                <h2>Upload een dataset om te beginnen</h2>
+                <p>Gebruik het paneel links om een Excel-bestand te laden.<br>
+                   De analyse wordt direct in de browser uitgevoerd.</p>
+            </div>
+
+            <!-- Table -->
+            <div id="tableWrap" class="table-card" style="display:none">
+                <div class="table-header">
+                    <h2>Voorraadadvies Overzicht</h2>
+                </div>
+                <div class="table-responsive">
+                    <table id="dataTable">
+                        <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Artikel</th>
+                            <th>Omschrijving</th>
+                            <th>Bestelpunt<br><small>Huidig → Advised</small></th>
+                            <th>Max Aantal<br><small>Huidig → Advised</small></th>
+                            <th>Financiële Impact</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ── DETAIL MODAL ──────────────────────────────── -->
+<div class="modal" id="detailModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Artikel Details</h2>
+            <button class="close-btn" data-close="detailModal">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+<!-- ── SETTINGS MODAL ───────────────────────────── -->
+<div class="modal" id="settingsModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2>⚙️ Instellingen</h2>
+            <button class="close-btn" data-close="settingsModal">&times;</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="tab-stijl">🎨 Stijl</button>
+            <button class="tab-btn" data-tab="tab-formule">🔢 Formule</button>
+            <button class="tab-btn" data-tab="tab-seizoen">📅 Seizoen</button>
+        </div>
+
+        <!-- Tab: Stijl -->
+        <div class="tab-panel active" id="tab-stijl">
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Logo</strong>
+                    <span>Upload je eigen logo (PNG/JPG/SVG)</span>
+                </div>
+                <label for="logoUpload" class="upload-label-sm">
+                    📁 Kies logo
+                    <input type="file" id="logoUpload" accept="image/*" style="display:none">
+                </label>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Primaire kleur</strong>
+                    <span>Knoppen, accenten en highlights</span>
+                </div>
+                <div class="color-wrap">
+                    <input type="color" id="colorPrimary" value="#0064B3">
+                    <span id="colorPrimaryHex">#0064B3</span>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Sidebar kleur</strong>
+                    <span>Achtergrond van het navigatiepaneel</span>
+                </div>
+                <div class="color-wrap">
+                    <input type="color" id="colorSidebar" value="#111c43">
+                    <span id="colorSidebarHex">#111c43</span>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Reset stijl</strong>
+                    <span>Herstel UltimAir standaard kleuren</span>
+                </div>
+                <button id="resetStyle" class="btn-secondary">↺ Reset</button>
+            </div>
+        </div>
+
+        <!-- Tab: Formule -->
+        <div class="tab-panel" id="tab-formule">
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Servicegraad Doel</strong>
+                    <span>Zet een hogere marge (Z-factor) op voorraden om misgrijpen te voorkomen.</span>
+                </div>
+                <div style="width:200px">
+                    <div class="slider-value-row">
+                        <span id="sgDisplay" style="font-size:18px; font-weight:700">95.0%</span>
+                    </div>
+                    <input type="range" id="serviceGraad" min="80" max="99.5" step="0.5" value="95" class="sg-slider">
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Berekeningsmethode</strong>
+                    <span>Kies de formules gebruikt in de app.</span>
+                </div>
+                <select id="paramCalcMethod" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:#f8f9fa;">
+                    <option value="ultimair" selected>UltimAir TDG90 Methode</option>
+                    <option value="klassiek">Klassiek / Standaard</option>
+                    <option value="custom">Nieuw (Mijn Formule)</option>
+                </select>
+            </div>
+            
+            <div id="methodeStaticInfo">
+                <div class="formula-info" id="methodeInfoTxt">
+                    <strong>UltimAir TDG90 Tweaks:</strong>
+                    <code>VV = Z × √(StDev × levertijd_mnd × gem_vraag)</code>
+                    <code>Bestelpunt = (gem_vraag × levertijd_mnd) + VV</code>
+                    <code>EOQ = Z × StDev × √(levertijd_mnd)</code>
+                    <code>Max Aantal = Bestelpunt + EOQ</code>
+                </div>
+            </div>
+
+            <!-- Custom Formule Input UI -->
+            <div id="methodeCustomInputs" style="display:none; background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:18px; border:1px solid var(--primary);">
+                <p style="font-size:12px; margin-bottom:12px; color:var(--text-muted);">
+                    Gebruik geldige JavaScript wiskunde. Beschikbare test-variabelen per artikel: <br>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">Z</code> 
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">stDev</code> 
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">ltMnd</code> 
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">gemVraag</code>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">lot</code>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">minSafety</code>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">eoqPeriod</code>
+                </p>
+                
+                <div class="setting-row" style="padding:6px 0; border:none;">
+                    <strong style="margin-bottom:4px; font-size:13px; display:block;">1. Veiligheidsvoorraad (VV) =</strong>
+                    <input type="text" id="customFormuleVV" value="Z * Math.sqrt(stDev * ltMnd * gemVraag)" style="width:100%; padding:8px; font-family:monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;">
+                </div>
+                
+                <div class="setting-row" style="padding:6px 0; border:none;">
+                    <strong style="margin-bottom:4px; font-size:13px; display:block;">2. Bestelpunt (BP) =</strong>
+                    <input type="text" id="customFormuleBP" value="(gemVraag * ltMnd) + VV" style="width:100%; padding:8px; font-family:monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;">
+                    <span style="font-size:10px; color:#888;">(Tip: je kan de <code>VV</code> uit stap 1 hierin gebruiken)</span>
+                </div>
+                
+                <div class="setting-row" style="padding:6px 0; border:none;">
+                    <strong style="margin-bottom:4px; font-size:13px; display:block;">3. Extra Bestelgrootte (EOQ) =</strong>
+                    <input type="text" id="customFormuleEOQ" value="Z * stDev * Math.sqrt(ltMnd)" style="width:100%; padding:8px; font-family:monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;">
+                </div>
+                
+                <div class="setting-row" style="padding:6px 0; border:none;">
+                    <strong style="margin-bottom:4px; font-size:13px; display:block;">4. Maximaal Aantal =</strong>
+                    <input type="text" id="customFormuleMax" value="BP + EOQ" style="width:100%; padding:8px; font-family:monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;">
+                    <span style="font-size:10px; color:#888;">(Tip: je kan de <code>BP</code> uit stap 2 en de <code>EOQ</code> uit stap 3 hierin gebruiken)</span>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Levertijdfactor</strong>
+                    <span>Veiligheidsmarge op levertijd (1.0 = exact, 1.2 = 20% buffer)</span>
+                </div>
+                <div class="num-input-wrap">
+                    <input type="number" id="paramLTFactor" value="1.0" min="0.5" max="3.0" step="0.1">
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>EOQ-periode (maanden)</strong>
+                    <span>Hoeveel maanden vraag per bestelling bovenop het bestelpunt</span>
+                </div>
+                <div class="num-input-wrap">
+                    <input type="number" id="paramEOQ" value="1" min="0.5" max="12" step="0.5">
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Minimum safety stock (stuks)</strong>
+                    <span>Absoluut minimum veiligheidsvoorraad per artikel</span>
+                </div>
+                <div class="num-input-wrap">
+                    <input type="number" id="paramMinSafety" value="0" min="0" max="999" step="1">
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Reset formule</strong>
+                    <span>Herstel standaard berekeningsparameters</span>
+                </div>
+                <button id="resetFormula" class="btn-secondary">↺ Reset</button>
+            </div>
+        </div>
+
+        <!-- Tab: Seizoen -->
+        <div class="tab-panel" id="tab-seizoen">
+            <div class="setting-row">
+                <div class="setting-info">
+                    <strong>Seizoensfluctuatie</strong>
+                    <span>Gebruik piekmaandvraag als basis voor het bestelpunt</span>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" id="seizoenToggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div id="seizoenDetails" class="season-info" style="display:none">
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <strong>Max piekfactor</strong>
+                        <span>Maximale vermenigvuldigingsfactor voor piekmaand (bv. 2.0 = max 2× gem.)</span>
+                    </div>
+                    <div class="num-input-wrap">
+                        <input type="number" id="paramPiekFactor" value="2.0" min="1.0" max="5.0" step="0.1">
+                    </div>
+                </div>
+                <div class="info-box">
+                    <strong>Hoe werkt het?</strong><br>
+                    De app berekent per artikel een seizoensindex per maand:<br>
+                    <code>index_m = verbruik_m / jaargemiddelde</code><br>
+                    De hoogste maandindex (afgeknot op de max piekfactor) wordt gebruikt als vraagbasis voor het bestelpunt.
+                    Artikelen zonder maanddata vallen terug op het jaargemiddelde.
+                </div>
+            </div>
+
+            <div class="info-box" id="seizoenOffInfo">
+                ℹ️ Wanneer uitgeschakeld wordt het <strong>jaargemiddelde</strong> als vraagbasis gebruikt. Dit kan leiden tot een te laag bestelpunt in piekmaanden.
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button id="applySettings" class="btn-primary">✓ Toepassen &amp; Herbereken</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
