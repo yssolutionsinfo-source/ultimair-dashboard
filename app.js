@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (clean(rk).toLowerCase()===k.toLowerCase()) return row[rk];
             return undefined;
         };
-        const artNr = clean(get('art nr.','art nr','artnr','artikel nr','nr.','nr','artikel'));
+        const artNr = clean(get('art nr.','art nr','artnr','artikel nr','artikelnr.','artikelnr','nr.','nr','artikel'));
         if (!artNr) return null;
 
         // Maandverbruiken: probeer jan t/m dec (inclusief mrt variant)
@@ -142,8 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
             stDev:       num(get('st. dev.','st.dev.','std dev','stddev','standaarddeviatie','sigma')),
             ltWeken,
             lot:         Math.max(1, Math.round(num(get('vaste lotgrootte','lotgrootte','lot','moq'), 1))),
-            currBP:      Math.round(num(get('huidig bestel-punt','huidig bestelpunt','current reorder','curr bp','bestelpunt'))),
-            currMax:     Math.round(num(get('huidig max aantal','huidig max','current max','maximale voorraad'))),
+            currBP:      Math.round(num(get('huidig bestel-punt','huidig bestelpunt','current reorder','curr bp','bestelpunt', 'safety voorraad'))),
+            currMax:     Math.round(num(get('huidig max aantal','huidig max','current max','maximale voorraad', 'voorraad'))),
             maandVerb
         };
     }
@@ -566,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let i=0; i<Math.min(10, rawArr.length); i++) {
                     const row = rawArr[i] || [];
                     const strRow = row.map(c => String(c||'').toLowerCase());
-                    if (strRow.includes('nr.') || strRow.includes('artikel') || strRow.includes('omschrijving')) {
+                    if (strRow.includes('nr.') || strRow.includes('artikel') || strRow.includes('artikelnr.') || strRow.includes('omschrijving')) {
                         headerRowIdx = i;
                         break;
                     }
@@ -604,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let headerRowIdx = 0;
                 for (let i=0; i<Math.min(10, rawArr.length); i++) {
                     const strRow = (rawArr[i] || []).map(c => String(c||'').toLowerCase());
-                    if (strRow.includes('nr.') || strRow.includes('artikel') || strRow.includes('art nr.')) {
+                    if (strRow.includes('nr.') || strRow.includes('artikel') || strRow.includes('artikelnr.') || strRow.includes('art nr.')) {
                         headerRowIdx = i; break;
                     }
                 }
