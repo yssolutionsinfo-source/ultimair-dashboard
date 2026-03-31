@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileUpload   = document.getElementById('fileUpload');
     const uploadText   = document.getElementById('uploadText');
     const fileStatus   = document.getElementById('fileStatus');
+    const skuUpload    = document.getElementById('skuUpload');
+    const skuUploadText= document.getElementById('skuUploadText');
+    const skuStatus    = document.getElementById('skuStatus');
     const emptyState   = document.getElementById('emptyState');
     const tableWrap    = document.getElementById('tableWrap');
     const settingsBtn  = document.getElementById('settingsBtn');
@@ -54,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // State
     let rawData       = [];
+    let rawSkuData    = {}; // Map van Artikel -> SKU config
     let processedData = [];
     let currentFilter = 'all';
     let currentSearch = '';
@@ -158,7 +162,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Main calculation ──────────────────────────
     function calcItem(raw, z) {
-        const { artNr, omschr, kostprijs, totaal, gemVerkopen, stDev, ltWeken, lot, currBP, currMax } = raw;
+        let { artNr, omschr, kostprijs, totaal, gemVerkopen, stDev, ltWeken, lot, currBP, currMax, maandVerb } = raw;
+
+        // Check for SKU Overrides
+        let hasSkuOverride = false;
+        if (rawSkuData[artNr]) {
+            hasSkuOverride = true;
+            const sku = rawSkuData[artNr];
+            if (sku.currBP !== undefined) currBP = sku.currBP;
+            if (sku.currMax !== undefined) currMax = sku.currMax;
+            if (sku.lot !== undefined) lot = sku.lot;
+            if (sku.ltWeken !== undefined) ltWeken = sku.ltWeken;
+            if (sku.kostprijs !== undefined) kostprijs = sku.kostprijs;
+        }
 
         if (totaal <= 0.1) {
             return {
@@ -283,6 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
             uitleg.push(newMax>currMax
                 ? `Max te krap. Verhoog naar ${newMax}.`
                 : `Max te hoog (overstock). Verlaag naar ${newMax} (lot=${lot}).`);
+        if (hasSkuOverride)
+            uitleg.push('Actuele parameters ingeladen vanuit de SKU-Kaart.');
         if (uitleg.length===0)
             uitleg.push('Instellingen in lijn met verbruik, levertijd en servicegraad.');
 
@@ -306,7 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
             advies_max:`${currMax} → ${newMax}`,
             status, uitleg:uitleg.join(' '), fin_ind,
             seizoenActief: cfg.seizoen && piekIdx>1.05,
-            piekFactor: piekIdx
+            piekFactor: piekIdx,
+            hasSkuOverride
         };
     }
 
@@ -331,9 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return mf&&ms;
         });
         rows.forEach(item=>{
+            let badges = '';
+            if (item.seizoenActief) badges += '<span class="season-badge" title="Seizoens-invloed">📅</span>';
+            if (item.hasSkuOverride) badges += '<span class="season-badge" style="background:rgba(255,255,255,0.2); color:#555; border:1px solid #ccc; font-size:10px; margin-left:5px; border-radius:4px; padding:2px 4px;" title="SKU Data geladen">SKU</span>';
+            
             const tr=document.createElement('tr');
             tr.innerHTML=`
-                <td><span class="status-badge ${getStatusClass(item.status)}">${item.status}</span>${item.seizoenActief?'<span class="season-badge">📅</span>':''}</td>
+                <td><span class="status-badge ${getStatusClass(item.status)}">${item.status}</span>${badges}</td>
                 <td><strong>${item.art_nr}</strong></td>
                 <td>${item.omschrijving}</td>
                 <td>${item.advies_bp}</td>
@@ -365,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="data-item"><label>Gem. Maandvraag (σ)</label><strong>${item.gem_vraag.toFixed(1)} (${item.st_dev.toFixed(1)})</strong></div>
                 <div class="data-item"><label>Kostprijs per stuk</label><strong>€${item.kostprijs.toFixed(2)}</strong></div>
                 <div class="data-item"><label>Levertijd / Lot</label><strong>${item.levertijd} wkn × ${cfg.ltFactor}× / ${item.lot} st</strong></div>
+                ${item.hasSkuOverride ? '<div class="data-item" style="grid-column: 1 / -1; background:#eef5ff; border:1px solid var(--primary);"><label style="color:var(--primary);">Verrijkt met SKU-Configuratie</label><strong>Actuele levertijd, lotgrootte, kostprijs en huidige BP/Max komen uit de geüploade SKU-Kaart.</strong></div>' : ''}
                 <div class="data-item"><label>Servicegraad / Z</label><strong>${sgSlider.value}% / Z=${getZ().toFixed(3)}</strong></div>
                 <div class="data-item"><label>Methode</label><strong>${cfg.calcMethod === 'ultimair' ? 'TDG90' : (cfg.calcMethod === 'project' ? 'Projectmatig' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule'))}</strong></div>
                 <div class="data-item"><label>Seizoen?</label><strong>${item.seizoenActief?`Ja – factor ${item.piekFactor.toFixed(2)}×`:'Nee'}</strong></div>
@@ -564,6 +588,52 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsArrayBuffer(file);
     });
 
+    // ── SKU Upload ───────────────────────────────
+    skuUpload.addEventListener('change',e=>{
+        const file=e.target.files[0];
+        if(!file) return;
+        skuUploadText.textContent=`📄 ${file.name}`;
+        skuStatus.textContent='Laden…';
+        const reader=new FileReader();
+        reader.onload=ev=>{
+            try {
+                const wb   = XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+                const ws   = wb.Sheets[wb.SheetNames[0]];
+
+                const rawArr = XLSX.utils.sheet_to_json(ws, {header: 1});
+                let headerRowIdx = 0;
+                for (let i=0; i<Math.min(10, rawArr.length); i++) {
+                    const strRow = (rawArr[i] || []).map(c => String(c||'').toLowerCase());
+                    if (strRow.includes('nr.') || strRow.includes('artikel') || strRow.includes('art nr.')) {
+                        headerRowIdx = i; break;
+                    }
+                }
+
+                const rows = XLSX.utils.sheet_to_json(ws,{defval:0, range: headerRowIdx});
+                rawSkuData = {};
+                let count = 0;
+                rows.map(parseRow).filter(Boolean).forEach(r => {
+                    // Only keep overrides
+                    rawSkuData[r.artNr] = {
+                        currBP: r.currBP,
+                        currMax: r.currMax,
+                        lot: r.lot,
+                        ltWeken: r.ltWeken,
+                        kostprijs: r.kostprijs
+                    };
+                    count++;
+                });
+                
+                skuStatus.textContent=`✅ ${count} SKU's ingeladen`;
+                if(rawData.length > 0) refresh();
+            } catch(err) {
+                skuStatus.textContent='❌ Fout bij inlezen configuratie';
+                console.error(err);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
     // ── Servicegraad slider ───────────────────────
     sgSlider.addEventListener('input',()=>{
         sgDisplay.textContent=`${parseFloat(sgSlider.value).toFixed(1)}%`;
@@ -582,6 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'Levertijd (wkn)':        item.levertijd,
             'Lotgrootte':             item.lot,
             'Methode':                cfg.calcMethod === 'ultimair' ? 'TDG90 Custom' : (cfg.calcMethod === 'project' ? 'Projectmatig' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule')),
+            'Data Bron':              item.hasSkuOverride ? 'Dataset + SKU Kaart' : 'Enkel Dataset',
             'Servicegraad %':         parseFloat(sgSlider.value),
             'Z-factor':               +getZ().toFixed(3),
             'LT-factor':              cfg.ltFactor,

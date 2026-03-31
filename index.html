@@ -18,14 +18,23 @@
 
         <!-- Servicegraad geplaatst in Instellingen Modal -->
 
-        <!-- Dataset upload -->
+        <!-- Dataset uploaden -->
         <div class="settings-panel">
-            <h3 class="panel-label">Dataset uploaden</h3>
+            <h3 class="panel-label">1. Dataset (Verbruik)</h3>
             <label for="fileUpload" class="upload-label">
                 <span id="uploadText">📂 Kies Excel bestand</span>
                 <input type="file" id="fileUpload" accept=".xlsx,.xls" style="display:none">
             </label>
-            <p id="fileStatus" class="file-status">Geen bestand geladen</p>
+            <p id="fileStatus" class="file-status">Geen dataset geladen</p>
+            
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:12px 0;">
+
+            <h3 class="panel-label" title="Overschrijft actuele instellingen zoals levertijd en huidig bestelpunt">2. SKU Kaart (Actueel)</h3>
+            <label for="skuUpload" class="upload-label" style="background: rgba(255,255,255,0.15); color: #fff;">
+                <span id="skuUploadText">📋 Kies Configuratiekaart</span>
+                <input type="file" id="skuUpload" accept=".xlsx,.xls" style="display:none">
+            </label>
+            <p id="skuStatus" class="file-status">Geen configuratie geladen (Optioneel)</p>
         </div>
 
         <!-- Filters -->
