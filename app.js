@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 totaal_vraag:totaal, gem_vraag:gemVerkopen, st_dev:stDev,
                 levertijd:ltWeken, lot, curr_bp:currBP, curr_max:currMax,
                 new_bp:0, new_max:0,
-                advies_bp:`${currBP} → 0`, advies_max:`${currMax} → 0`,
+                advies_bp: 0, advies_max: 0,
                 status:'❌ Actie nodig',
                 uitleg:'Structureel geen of vrijwel geen vraag (totaal ≈ 0). Slow/non-mover. Stel bestelpunt en max op 0.',
                 fin_ind: currMax>0
@@ -363,8 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
             totaal_vraag:totaal, gem_vraag:gemVerkopen, st_dev:stDev,
             levertijd:ltWeken, lot, curr_bp:currBP, curr_max:currMax,
             new_bp:newBP, new_max:newMax,
-            advies_bp:`${currBP} → ${newBP}`,
-            advies_max:`${currMax} → ${newMax}`,
+            advies_bp: newBP,
+            advies_max: newMax,
             status, uitleg:uitleg.join(' '), fin_ind,
             seizoenActief: cfg.seizoen && piekIdx>1.05,
             piekFactor: piekIdx,
@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML='';
         const term = currentSearch.toLowerCase();
         const rows = processedData.filter(item=>{
-            const mf = currentFilter==='all' || (currentFilter==='SKU' ? item.hasSkuOverride : item.status===currentFilter);
+            const mf = currentFilter==='all' || item.status===currentFilter;
             const ms = item.art_nr.toLowerCase().includes(term)||item.omschrijving.toLowerCase().includes(term);
             return mf&&ms;
         });
