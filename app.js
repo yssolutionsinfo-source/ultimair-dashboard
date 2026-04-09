@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML='';
         const term = currentSearch.toLowerCase();
         const rows = processedData.filter(item=>{
-            const mf = currentFilter==='all' || item.status===currentFilter;
+            const mf = currentFilter==='all' || (currentFilter==='SKU' ? item.hasSkuOverride : item.status===currentFilter);
             const ms = item.art_nr.toLowerCase().includes(term)||item.omschrijving.toLowerCase().includes(term);
             return mf&&ms;
         });
