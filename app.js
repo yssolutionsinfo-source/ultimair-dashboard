@@ -714,16 +714,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rows = XLSX.utils.sheet_to_json(ws,{defval:0, range: headerRowIdx});
                 rawSkuData = {};
                 let count = 0;
-                rows.map(parseRow).filter(Boolean).forEach(r => {
-                    // Only keep overrides
-                    rawSkuData[r.artNr] = {
-                        currBP: r.currBP,
-                        currMax: r.currMax,
-                        lot: r.lot,
-                        ltWeken: r.ltWeken,
-                        kostprijs: r.kostprijs
+                rows.forEach(row => {
+                    const parsed = parseRow(row);
+                    if (!parsed) return;
+                    
+                    const get = (...keys) => {
+                        for (const k of keys)
+                            for (const rk of Object.keys(row))
+                                if (clean(rk).toLowerCase()===k.toLowerCase()) return row[rk];
+                        return undefined;
                     };
-                    count++;
+                    
+                    let overrides = {};
+                    const vBP = get('huidig bestel-punt','huidig bestelpunt','current reorder','curr bp','bestelpunt', 'safety voorraad');
+                    if (vBP !== undefined) overrides.currBP = Math.round(num(vBP));
+                    
+                    const vMax = get('huidig max aantal','huidig max','current max','maximale voorraad', 'voorraad');
+                    if (vMax !== undefined) overrides.currMax = Math.round(num(vMax));
+                    
+                    const vLot = get('vaste lotgrootte','lotgrootte','lot','moq');
+                    if (vLot !== undefined) overrides.lot = Math.max(1, Math.round(num(vLot)));
+                    
+                    const vLt = get('levertijd in weken','levertijd weken','lt weken','levertijd (wkn)','levertijd','levertermijn');
+                    if (vLt !== undefined) {
+                        if (typeof vLt === 'string' && vLt.toUpperCase().trim().endsWith('WD')) {
+                            overrides.ltWeken = Math.max(1, Math.ceil(num(vLt.toUpperCase().replace('WD','')) / 5));
+                        } else {
+                            overrides.ltWeken = num(vLt);
+                        }
+                    }
+                    
+                    const vKst = get('kostprijs','cost','prijs','ink €','ink');
+                    if (vKst !== undefined) overrides.kostprijs = num(vKst);
+                    
+                    if (Object.keys(overrides).length > 0) {
+                        rawSkuData[parsed.artNr] = overrides;
+                        count++;
+                    }
                 });
                 
                 skuStatus.textContent=`✅ ${count} SKU's ingeladen`;
