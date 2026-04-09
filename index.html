@@ -197,7 +197,7 @@
                     <option value="ultimair" selected>UltimAir TDG90 Methode</option>
                     <option value="klassiek">Klassiek / Standaard</option>
                     <option value="project">Barcol-Air (Projectmatig)</option>
-                    <option value="custom">Nieuw (Mijn Formule)</option>
+                    <option value="new_custom">➕ Nieuwe Eigen Formule...</option>
                 </select>
             </div>
             
@@ -213,15 +213,20 @@
 
             <!-- Custom Formule Input UI -->
             <div id="methodeCustomInputs" style="display:none; background:#f8f9fa; border-radius:10px; padding:16px; margin-bottom:18px; border:1px solid var(--primary);">
+                <div class="setting-row" style="padding:4px 0 10px 0; border:none; margin-bottom:8px; border-bottom:1px solid rgba(0,0,0,0.05);">
+                    <strong style="margin-bottom:4px; font-size:13px; display:block;">Naam configuratie</strong>
+                    <input type="text" id="customFormuleNaam" placeholder="Bijv. Projectmatig Marge 2" style="width:100%; padding:8px; font-size:13px; border:1px solid var(--border); border-radius:6px;">
+                </div>
+                
                 <p style="font-size:12px; margin-bottom:12px; color:var(--text-muted);">
-                    Gebruik geldige JavaScript wiskunde. Beschikbare test-variabelen per artikel: <br>
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">Z</code> 
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">stDev</code> 
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">ltMnd</code> 
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">gemVraag</code>
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">lot</code>
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">minSafety</code>
-                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px;">eoqPeriod</code>
+                    Gebruik geldige JavaScript wiskunde. Beschikbare variabelen per artikel: <br>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">Z</code> 
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">stDev</code> 
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">ltMnd</code> 
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">gemVraag</code>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">lot</code>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">minSafety</code>
+                    <code style="background:#eef0f8; padding:2px 4px; border-radius:3px; display:inline-block; margin-top:4px;">eoqPeriod</code>
                 </p>
                 
                 <div class="setting-row" style="padding:6px 0; border:none;">
@@ -244,6 +249,11 @@
                     <strong style="margin-bottom:4px; font-size:13px; display:block;">4. Maximaal Aantal =</strong>
                     <input type="text" id="customFormuleMax" value="BP + EOQ" style="width:100%; padding:8px; font-family:monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;">
                     <span style="font-size:10px; color:#888;">(Tip: je kan de <code>BP</code> uit stap 2 en de <code>EOQ</code> uit stap 3 hierin gebruiken)</span>
+                </div>
+
+                <div style="margin-top:12px; display:flex; gap:8px;">
+                    <button id="saveCustomFormule" class="btn-primary" style="flex:1; font-size:13px; padding:6px 12px; background:#005193;">💾 Formule Opslaan</button>
+                    <button id="deleteCustomFormule" class="btn-secondary" style="font-size:13px; padding:6px 12px; display:none;">🗑️ Verwijderen</button>
                 </div>
             </div>
 

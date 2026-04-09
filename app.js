@@ -46,7 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const customFormuleVV = document.getElementById('customFormuleVV');
     const customFormuleBP = document.getElementById('customFormuleBP');
     const customFormuleEOQ= document.getElementById('customFormuleEOQ');
-    const customFormuleMax= document.getElementById('customFormuleMax');
+    const customFormuleNaam= document.getElementById('customFormuleNaam');
+    const saveCustomFormule= document.getElementById('saveCustomFormule');
+    const deleteCustomFormule= document.getElementById('deleteCustomFormule');
 
     const resetFormula   = document.getElementById('resetFormula');
     const seizoenToggle  = document.getElementById('seizoenToggle');
@@ -61,6 +63,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let processedData = [];
     let currentFilter = 'all';
     let currentSearch = '';
+    
+    // Custom Formulas persistent
+    let savedFormulas = {};
+    try {
+        const stored = localStorage.getItem('ultimairFormulas');
+        if (stored) savedFormulas = JSON.parse(stored);
+    } catch(e) {}
 
     // Config (mutable by settings)
     let cfg = {
@@ -70,15 +79,35 @@ document.addEventListener('DOMContentLoaded', () => {
         eoqPeriod:  1.0,
         minSafety:  0,
         calcMethod: 'ultimair',
-        formulaVV:  'Z * Math.sqrt(stDev * ltMnd * gemVraag)',
-        formulaBP:  '(gemVraag * ltMnd) + VV',
-        formulaEOQ: 'Z * stDev * Math.sqrt(ltMnd)',
-        formulaMax: 'BP + EOQ',
         seizoen:    false,
         piekFactor: 2.0
     };
 
     const DEFAULTS = { ...cfg };
+    
+    function refreshFormulaDropdown() {
+        // Build options
+        let html = `
+            <option value="ultimair">UltimAir TDG90 Methode</option>
+            <option value="klassiek">Klassiek / Standaard</option>
+            <option value="project">Barcol-Air (Projectmatig)</option>
+        `;
+        for (const key in savedFormulas) {
+            html += `<option value="${key}">${savedFormulas[key].name}</option>`;
+        }
+        html += `<option value="new_custom">➕ Nieuwe Eigen Formule...</option>`;
+        
+        const currentVal = paramCalcMethod.value || cfg.calcMethod;
+        paramCalcMethod.innerHTML = html;
+        if (paramCalcMethod.querySelector(`option[value="${currentVal}"]`)) {
+            paramCalcMethod.value = currentVal;
+        } else {
+            paramCalcMethod.value = 'ultimair';
+            cfg.calcMethod = 'ultimair';
+        }
+    }
+    
+    refreshFormulaDropdown();
 
     // ── Probit (inverse normal CDF) ──────────────
     function probit(p) {
@@ -229,7 +258,21 @@ document.addEventListener('DOMContentLoaded', () => {
             let rawMax = newBP + Math.max(1, Math.ceil(customEOQ));
             newMax = (lot > 1) ? Math.ceil(rawMax/lot)*lot : rawMax;
 
-        } else if (cfg.calcMethod === 'custom') {
+        } else if (cfg.calcMethod === 'new_custom' || savedFormulas[cfg.calcMethod]) {
+            // Either a specific saved formula is active, or user selected 'new_custom' but hit Apply without saving
+            // In either case, we can use the inputs currently active in 'cfg' or fall back to saved
+            let fVV, fBP, fEOQ, fMax;
+            
+            if (savedFormulas[cfg.calcMethod]) {
+                const f = savedFormulas[cfg.calcMethod];
+                fVV = f.formulaVV; fBP = f.formulaBP; fEOQ = f.formulaEOQ; fMax = f.formulaMax;
+            } else {
+                fVV = cfg.formulaVV || 'Z * Math.sqrt(stDev * ltMnd * gemVraag)';
+                fBP = cfg.formulaBP || '(gemVraag * ltMnd) + VV';
+                fEOQ = cfg.formulaEOQ || 'Z * stDev * Math.sqrt(ltMnd)';
+                fMax = cfg.formulaMax || 'BP + EOQ';
+            }
+
             // Evaluator helper
             const evaluateCustom = (formulaStr, locals) => {
                 try {
@@ -249,20 +292,20 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             // 1. VV
-            const VV = Math.max(0, evaluateCustom(cfg.formulaVV, scope));
+            const VV = Math.max(0, evaluateCustom(fVV, scope));
             scope.VV = VV;
             
             // 2. BP
-            const bpRaw = evaluateCustom(cfg.formulaBP, scope);
+            const bpRaw = evaluateCustom(fBP, scope);
             newBP = Math.max(0, Math.ceil(bpRaw));
             scope.BP = newBP;
             
             // 3. EOQ
-            const EOQ = evaluateCustom(cfg.formulaEOQ, scope);
+            const EOQ = evaluateCustom(fEOQ, scope);
             scope.EOQ = EOQ;
             
             // 4. Max
-            const maxRaw = evaluateCustom(cfg.formulaMax, scope);
+            const maxRaw = evaluateCustom(fMax, scope);
             newMax = Math.max(newBP, Math.ceil(maxRaw));
             if (lot > 1) newMax = Math.ceil(newMax/lot)*lot;
             
@@ -456,14 +499,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Config method info
     paramCalcMethod.addEventListener('change', () => {
-        if (paramCalcMethod.value === 'custom') {
+        const val = paramCalcMethod.value;
+        if (val === 'new_custom' || savedFormulas[val]) {
             methodeStaticInfo.style.display = 'none';
             methodeCustomInputs.style.display = 'block';
+            
+            if (val === 'new_custom') {
+                customFormuleNaam.value = '';
+                customFormuleVV.value = 'Z * Math.sqrt(stDev * ltMnd * gemVraag)';
+                customFormuleBP.value = '(gemVraag * ltMnd) + VV';
+                customFormuleEOQ.value = 'Z * stDev * Math.sqrt(ltMnd)';
+                customFormuleMax.value = 'BP + EOQ';
+                deleteCustomFormule.style.display = 'none';
+            } else {
+                const f = savedFormulas[val];
+                customFormuleNaam.value = f.name;
+                customFormuleVV.value = f.formulaVV;
+                customFormuleBP.value = f.formulaBP;
+                customFormuleEOQ.value = f.formulaEOQ;
+                customFormuleMax.value = f.formulaMax;
+                deleteCustomFormule.style.display = 'inline-block';
+            }
         } else {
             methodeStaticInfo.style.display = 'block';
             methodeCustomInputs.style.display = 'none';
             
-            if (paramCalcMethod.value === 'ultimair') {
+            if (val === 'ultimair') {
                 methodeInfoTxt.innerHTML = `
                     <strong>UltimAir TDG90 Tweaks:</strong>
                     <code>VV = Z × √(StDev × levertijd_mnd × gem_vraag)</code>
@@ -487,6 +548,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     <code>Max Aantal = Bestelpunt + gem_vraag</code>
                 `;
             }
+        }
+    });
+
+    // Save Custom Formula
+    saveCustomFormule.addEventListener('click', () => {
+        let name = customFormuleNaam.value.trim();
+        if (!name) name = 'Naamloze Formule';
+        
+        const fVV = customFormuleVV.value.trim() || '0';
+        const fBP = customFormuleBP.value.trim() || '0';
+        const fEOQ = customFormuleEOQ.value.trim() || '0';
+        const fMax = customFormuleMax.value.trim() || '0';
+        
+        let id = paramCalcMethod.value;
+        if (id === 'new_custom') id = 'custom_' + Date.now();
+        
+        savedFormulas[id] = {
+            id, name,
+            formulaVV: fVV, formulaBP: fBP, formulaEOQ: fEOQ, formulaMax: fMax
+        };
+        
+        localStorage.setItem('ultimairFormulas', JSON.stringify(savedFormulas));
+        
+        const prev = paramCalcMethod.value;
+        paramCalcMethod.value = id; // Ensure state changes to it
+        refreshFormulaDropdown();
+        paramCalcMethod.value = id;
+        paramCalcMethod.dispatchEvent(new Event('change'));
+        
+        alert(`Formule '${name}' succesvol opgeslagen!`);
+    });
+
+    // Delete Custom Formula
+    deleteCustomFormule.addEventListener('click', () => {
+        const id = paramCalcMethod.value;
+        if (savedFormulas[id] && confirm('Weet je zeker dat je deze formule wilt verwijderen?')) {
+            delete savedFormulas[id];
+            localStorage.setItem('ultimairFormulas', JSON.stringify(savedFormulas));
+            paramCalcMethod.value = 'ultimair';
+            refreshFormulaDropdown();
+            paramCalcMethod.dispatchEvent(new Event('change'));
         }
     });
 
@@ -651,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'StDev':                  +item.st_dev.toFixed(1),
             'Levertijd (wkn)':        item.levertijd,
             'Lotgrootte':             item.lot,
-            'Methode':                cfg.calcMethod === 'ultimair' ? 'TDG90 Custom' : (cfg.calcMethod === 'project' ? 'Projectmatig' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : 'Mijn Formule')),
+            'Methode':                cfg.calcMethod === 'ultimair' ? 'TDG90 Custom' : (cfg.calcMethod === 'project' ? 'Projectmatig' : (cfg.calcMethod === 'klassiek' ? 'Klassiek' : (savedFormulas[cfg.calcMethod] ? savedFormulas[cfg.calcMethod].name : 'Mijn Formule'))),
             'Data Bron':              item.hasSkuOverride ? 'Dataset + SKU Kaart' : 'Enkel Dataset',
             'Servicegraad %':         parseFloat(sgSlider.value),
             'Z-factor':               +getZ().toFixed(3),
